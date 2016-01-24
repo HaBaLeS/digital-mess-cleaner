@@ -1,13 +1,13 @@
 import exifread
 import os
 import shutil
-import hashlib
-import argparse
 
-args = []
+
+import dmcutils
+from dmcutils import mylog
+
+
 report = {}
-
-
 
 def processVideo(candidate):
     vp = os.path.join(inputDir,'videos')
@@ -22,32 +22,37 @@ def processVideo(candidate):
 
     move(candidate, outPath);
 
+def processFile(file):
+    print(file)
+    if str(file).lower().endswith(('.jpg', '.jpeg')):
+        processImage(file)
+        report["processImageCount"] = report["processImageCount"] + 1
+    elif 'mp4' in str(file).lower():
+        #processVideo(candidate)
+        pass
+    elif 'avi' in str(file).lower():
+        #processVideo(candidate)
+        pass
+    elif 'mov' in str(file).lower():
+        #processVideo(candidate)
+        pass
+    else:
+        mylog("Unhandled %s " % file)
+
+
 def scanAndProcessFolders(inputDir):
     mylog("Starting in " + inputDir)
-    cnt = 0
+    fileList = []
     for root, dirs, files in os.walk(inputDir):
         for file in files:
             candidate = os.path.join(root, file)
-            if str(file).lower().endswith(('.jpg', '.jpeg')):
-                processImage(candidate)
-                report["processImageCount"] = report["processImageCount"]+1
-                cnt = cnt + 1
-            elif 'mp4' in str(file).lower():
-                #processVideo(candidate)
-                pass
-            elif 'avi' in str(file).lower():
-                #processVideo(candidate)
-                pass
-            elif 'mov' in str(file).lower():
-                #processVideo(candidate)
-                pass
-            else:
-                mylog("Unhandled %s " % file)
+            fileList.append(candidate);
+
+    for candidate in fileList:
+            processImage(candidate);
 
 
-def mylog(text):
-    if(args.verbose):
-        print(text)
+
 
 
 def processImage(img):
@@ -80,7 +85,7 @@ def moveImage(image,datestr):
 
     newPath = os.path.join(args.targetFolder, year,month,filename)
     if(os.path.exists(newPath)):
-        if(not handleDublette(image,newPath)):
+        if(not checkForDublette(image,newPath)):
             newPath = os.path.join(args.targetFolder, year, month, "dif_" + filename)
             mylog("New filename for conflicting file generated %s" % newPath)
             move(image,newPath)
@@ -102,9 +107,9 @@ def move(srcFile, toDir):
 
 
 
-def handleDublette(image,newPath):
-    imageHash =  fileSha265Sum(image)
-    copyedHash = fileSha265Sum(newPath)
+def checkForDublette(image,newPath):
+    imageHash =  dmcutils.fileSha265Sum(image)
+    copyedHash = dmcutils.fileSha265Sum(newPath)
     if(imageHash == copyedHash):
         return True
     else:
@@ -112,12 +117,7 @@ def handleDublette(image,newPath):
 
 
 
-def fileSha265Sum(file):
-    f = open(file,'r')
-    data = f.read()
-    m = hashlib.sha256()
-    m.update(data)
-    return m.hexdigest()
+
 
 def createDirsIfNotExist(dateList):
     year = os.path.join(args.targetFolder,dateList[0].strip())
@@ -132,21 +132,23 @@ def createDirsIfNotExist(dateList):
     return year, month
 
 
+def init(commandArgs):
 
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("inputFolder", help="Path to the folder to inspect") #TODO Add directory Validatoor -- https://stackoverflow.com/questions/11415570/directory-path-types-with-argparse
-    parser.add_argument("targetFolder", help="Path to the image Directory")
-    parser.add_argument("-n", "--copyonly", help="Do not move only copy files.",  action="store_true")
-    parser.add_argument("-v", "--verbose", help="Turn on logging.", action="store_true")
-    parser.add_argument("-re", "--requireExif", help="Skip all images with missing EXIF Timestamp", action="store_true")
-    args = parser.parse_args()
+    global args
 
     report["processImageCount"] = 0;
     report["processNoExif"] = 0;
+
+    mylog("Init FileUtils")
+    args = commandArgs
+
+if __name__ == '__main__':
+
+    dmcutils.init()
+    init(dmcutils.commandArgs)
     scanAndProcessFolders(args.inputFolder)
 
     mylog("Images processed %s" % report["processImageCount"])
     mylog("Images without valid EXIF Date %s" % report["processNoExif"])
+
 
