@@ -24,6 +24,11 @@ def processVideo(candidate):
 
 def processFile(file):
     print(file)
+
+    if not os.path.isfile(file):
+	mylog("File %s does not exist." % file)
+	return
+
     if str(file).lower().endswith(('.jpg', '.jpeg')):
         processImage(file)
         report["processImageCount"] = report["processImageCount"] + 1
