@@ -9,37 +9,41 @@ from dmcutils import mylog
 
 report = {}
 
-def processVideo(candidate):
-    vp = os.path.join(inputDir,'videos')
+trashFiles = [
+    '.DS_Store',
+    'Thumbs.db',
+    '.picasa.ini'
+]
+
+def processVideo(file):
+    vp = os.path.join(args.targetFolder,'videos')
     if not os.path.exists(vp):
         os.mkdir(vp)
 
-    outPath = os.path.join(vp,os.path.split(candidate)[1])
+    outPath = os.path.join(vp,os.path.split(file)[1])
+
+    #check filesize ... if same then SHA -- just to save a little bit of time
 
     while os.path.exists(outPath) :
         print outPath + " exists geenrating new name"
-        outPath = os.path.join(vp,"dif_" + os.path.split(candidate)[1])
+        outPath = os.path.join(vp,"dif_" + os.path.split(file)[1])
 
-    move(candidate, outPath);
+    move(file, outPath);
 
 def processFile(file):
-    print(file)
-
     if not os.path.isfile(file):
-	mylog("File %s does not exist." % file)
-	return
+        mylog("File %s does not exist." % file)
+        return
 
     if str(file).lower().endswith(('.jpg', '.jpeg')):
         processImage(file)
-        report["processImageCount"] = report["processImageCount"] + 1
-    elif 'mp4' in str(file).lower():
-        #processVideo(candidate)
+        report["processImageCount"] += 1
+    elif str(file).lower().endswith(('.mp4', '.mov', '.avi')):
+        processVideo(file)
         pass
-    elif 'avi' in str(file).lower():
-        #processVideo(candidate)
-        pass
-    elif 'mov' in str(file).lower():
-        #processVideo(candidate)
+    elif any(bf.lower() in str(file).lower() for bf in trashFiles):
+        mylog("Deleting %s because defindes as Trash" % file)
+        os.remove(file)
         pass
     else:
         mylog("Unhandled %s " % file)
